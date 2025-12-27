@@ -82,36 +82,43 @@ class StorageService {
 }
 
 class DataStore {
-  constructor(storage){
-    this.storage=storage;
-    this.state = { companies:[], outreach:[], transactions:[], logs:[], ui:{range:'thisMonth', financeFilters:{}} };
+  constructor(storage) {
+    this.storage = storage;
+    this.state = { companies: [], outreach: [], transactions: [], logs: [] };
   }
-  normalizeState(raw){
-    if(!raw || typeof raw!=='object') return { companies:[], outreach:[], transactions:[], logs:[], ui:{range:'thisMonth', financeFilters:{}} };
-    return {
-      companies: Array.isArray(raw.companies)? raw.companies : [],
-      outreach: Array.isArray(raw.outreach)? raw.outreach : [],
-      transactions: Array.isArray(raw.transactions)? raw.transactions : [],
-      logs: Array.isArray(raw.logs)? raw.logs : [],
-      ui: raw.ui && typeof raw.ui==='object' ? { range: raw.ui.range || 'thisMonth', financeFilters: raw.ui.financeFilters || {} } : { range:'thisMonth', financeFilters:{} }
-    };
+  async init() {
+    const saved = await this.storage.loadState();
+    if (saved) this.state = saved; else this.resetDemo();
   }
-  async init(){ const saved=await this.storage.loadState(); if(saved) this.state=this.normalizeState(saved); else this.resetDemo(); }
-  persist(){ this.storage.saveState(this.state); }
-  resetDemo(){
-    const c1 = { companyId: utils.uuid(), companyName:'Blackline Ventures', niche:'SaaS', location:'NY, NY', website:'https://blackline.example', primaryEmail:'ceo@blackline.co', phone:'212-555-0101', ownerName:'Evelyn Stone', status:'Meeting Set', dealValue:65000, notes:'Warm intro via board.', tags:['enterprise','priority'], nextAction:'Send proposal', createdAt: Date.now(), updatedAt: Date.now() };
-    const c2 = { companyId: utils.uuid(), companyName:'Northstar Media', niche:'Media', location:'SF, CA', website:'https://northstar.example', primaryEmail:'ops@northstar.media', phone:'415-555-2333', ownerName:'Kai Turner', status:'Lead', dealValue:18000, notes:'Cold outbound list', tags:['media'], nextAction:'Call CFO', createdAt: Date.now(), updatedAt: Date.now() };
-    const c3 = { companyId: utils.uuid(), companyName:'Harbor Logistics', niche:'Logistics', location:'Austin, TX', website:'', primaryEmail:'hello@harborlog.com', phone:'512-555-1000', ownerName:'Mara Quinn', status:'Proposal', dealValue:42000, notes:'RFP stage', tags:['logistics','rfp'], nextAction:'Follow-up on RFP', createdAt: Date.now(), updatedAt: Date.now() };
-    const outreach=[
-      { outreachId: utils.uuid(), companyId:c1.companyId, channel:'Email', templateName:'Warm Intro', subject:'Intro deck', sentAt:new Date().toISOString(), outcome:'Meeting', nextFollowUpAt:new Date(Date.now()+86400000).toISOString(), followUpCount:2, notes:'Meeting booked' },
-      { outreachId: utils.uuid(), companyId:c2.companyId, channel:'LinkedIn', templateName:'Cold', subject:'Ops revamp', sentAt:new Date().toISOString(), outcome:'No reply', nextFollowUpAt:new Date(Date.now()+2*86400000).toISOString(), followUpCount:1, notes:'Left note' }
+  persist() { this.storage.saveState(this.state); }
+
+  resetDemo() {
+    const c1 = { companyId: utils.uuid(), companyName: 'Blackline Ventures', niche:'SaaS', location:'NY, NY', website:'https://blackline.example', primaryEmail:'ceo@blackline.co', phone:'212-555-0101', ownerName:'Evelyn Stone', status:'Meeting Set', dealValue:65000, notes:'Warm intro via board.', tags:['enterprise','priority'], nextAction:'Send proposal', createdAt: Date.now(), updatedAt: Date.now() };
+    const c2 = { companyId: utils.uuid(), companyName: 'Northstar Media', niche:'Media', location:'SF, CA', website:'https://northstar.example', primaryEmail:'ops@northstar.media', phone:'415-555-2333', ownerName:'Kai Turner', status:'Lead', dealValue:18000, notes:'Cold outbound list', tags:['media'], nextAction:'Call CFO', createdAt: Date.now(), updatedAt: Date.now() };
+    const c3 = { companyId: utils.uuid(), companyName: 'Harbor Logistics', niche:'Logistics', location:'Austin, TX', website:'', primaryEmail:'hello@harborlog.com', phone:'512-555-1000', ownerName:'Mara Quinn', status:'Proposal', dealValue:42000, notes:'RFP stage', tags:['logistics','rfp'], nextAction:'Follow-up on RFP', createdAt: Date.now(), updatedAt: Date.now() };
+    const outreach = [
+      { outreachId: utils.uuid(), companyId: c1.companyId, channel:'Email', templateName:'Warm Intro', subject:'Intro deck', sentAt:new Date().toISOString(), outcome:'Meeting', nextFollowUpAt:new Date(Date.now()+86400000).toISOString(), followUpCount:2, notes:'Meeting booked' },
+      { outreachId: utils.uuid(), companyId: c2.companyId, channel:'LinkedIn', templateName:'Cold', subject:'Ops revamp', sentAt:new Date().toISOString(), outcome:'No reply', nextFollowUpAt:new Date(Date.now()+2*86400000).toISOString(), followUpCount:1, notes:'Left note' }
     ];
-    const transactions=[
-      { txId: utils.uuid(), date: utils.today(), type:'Income', amount:18000, category:'Revenue-Client', companyId:c1.companyId, description:'Phase 1 payment', paymentMethod:'Wire', recurring:false },
-      { txId: utils.uuid(), date: utils.today(), type:'Expense', amount:1200, category:'Software', companyId:null, description:'Tools', paymentMethod:'Card', recurring:true, interval:'Monthly' }
+    const transactions = [
+      { txId: utils.uuid(), date: utils.today(), type:'Income', amount: 18000, category:'Revenue-Client', companyId:c1.companyId, description:'Phase 1 payment', paymentMethod:'Wire', recurring:false },
+      { txId: utils.uuid(), date: utils.today(), type:'Expense', amount: 1200, category:'Software', companyId:null, description:'Tools', paymentMethod:'Card', recurring:true, interval:'Monthly' }
     ];
-    const logs=[{ logId: utils.uuid(), date: utils.today(), topPriorities:['Close Blackline','Refine outreach'], wins:['Booked meeting'], blockers:['Waiting on data'], metrics:{callsMade:12, emailsSent:30, meetings:2, revenueToday:18000, expensesToday:1200}, notes:'Good momentum' }];
-    this.state={companies:[c1,c2,c3], outreach, transactions, logs, ui:{range:'thisMonth', financeFilters:{}}};
+    const logs = [
+      { logId: utils.uuid(), date: utils.today(), topPriorities:['Close Blackline','Refine outreach'], wins:['Booked meeting'], blockers:['Waiting on data'], metrics:{callsMade:12, emailsSent:30, meetings:2, revenueToday:18000, expensesToday:1200}, notes:'Good momentum' }
+    ];
+    this.state = { companies:[c1,c2,c3], outreach, transactions, logs };
+    this.persist();
+  }
+
+  upsert(collection, item, key='id') {
+    const arr = this.state[collection];
+    const idx = arr.findIndex(i => i[key] === item[key]);
+    if (idx>=0) arr[idx] = item; else arr.push(item);
+    this.persist();
+  }
+  delete(collection, key, value) {
+    this.state[collection] = this.state[collection].filter(i => i[key] !== value);
     this.persist();
   }
 }
