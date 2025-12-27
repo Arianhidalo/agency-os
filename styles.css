@@ -8,7 +8,7 @@
   --accent: #ececec;
   --shadow: 0 10px 30px rgba(0,0,0,0.35);
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.07'/%3E%3C/svg%3E");
-  font-family: "Helvetica Neue", Arial, sans-serif;
+  --font: "Helvetica Neue", Arial, sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -16,7 +16,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: var(--font), "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font);
   min-height: 100vh;
   background-image: var(--grain);
 }
@@ -52,8 +52,9 @@ button.ghost { background: transparent; }
 .card h3 { margin: 0 0 8px; }
 .flex { display: flex; gap: 12px; flex-wrap: wrap; }
 .grid { display: grid; gap: 12px; }
-.grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+.grid-2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
 .grid-3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+.grid-4 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
 .table { width: 100%; border-collapse: collapse; }
 .table th, .table td { border: 1px solid var(--line); padding: 8px; text-align: left; font-size: 13px; }
 .table th { background: #151515; }
