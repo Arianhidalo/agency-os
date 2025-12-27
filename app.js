@@ -67,7 +67,11 @@ class StorageService {
     });
   }
   async loadState(){
-    if(this.useLocal){ const raw=localStorage.getItem('agencyState'); return raw?JSON.parse(raw):null; }
+    if(this.useLocal){
+      const raw=localStorage.getItem('agencyState');
+      if(!raw) return null;
+      try { return JSON.parse(raw); } catch(e){ console.warn('Failed to parse localStorage state', e); return null; }
+    }
     return new Promise((resolve,reject)=>{
       const tx=this.db.transaction('state','readonly');
       const req=tx.objectStore('state').get('main');
@@ -82,7 +86,17 @@ class DataStore {
     this.storage=storage;
     this.state = { companies:[], outreach:[], transactions:[], logs:[], ui:{range:'thisMonth', financeFilters:{}} };
   }
-  async init(){ const saved=await this.storage.loadState(); if(saved) this.state=saved; else this.resetDemo(); }
+  normalizeState(raw){
+    if(!raw || typeof raw!=='object') return { companies:[], outreach:[], transactions:[], logs:[], ui:{range:'thisMonth', financeFilters:{}} };
+    return {
+      companies: Array.isArray(raw.companies)? raw.companies : [],
+      outreach: Array.isArray(raw.outreach)? raw.outreach : [],
+      transactions: Array.isArray(raw.transactions)? raw.transactions : [],
+      logs: Array.isArray(raw.logs)? raw.logs : [],
+      ui: raw.ui && typeof raw.ui==='object' ? { range: raw.ui.range || 'thisMonth', financeFilters: raw.ui.financeFilters || {} } : { range:'thisMonth', financeFilters:{} }
+    };
+  }
+  async init(){ const saved=await this.storage.loadState(); if(saved) this.state=this.normalizeState(saved); else this.resetDemo(); }
   persist(){ this.storage.saveState(this.state); }
   resetDemo(){
     const c1 = { companyId: utils.uuid(), companyName:'Blackline Ventures', niche:'SaaS', location:'NY, NY', website:'https://blackline.example', primaryEmail:'ceo@blackline.co', phone:'212-555-0101', ownerName:'Evelyn Stone', status:'Meeting Set', dealValue:65000, notes:'Warm intro via board.', tags:['enterprise','priority'], nextAction:'Send proposal', createdAt: Date.now(), updatedAt: Date.now() };
@@ -296,43 +310,46 @@ class UI {
       <div class="flex" style="justify-content:flex-end"><button class="btn ghost" id="detail-touch">Add touchpoint</button></div>
       <div class="timeline">${outreach.map(o=>`<div class="timeline-item"><strong>${o.channel}</strong> ${new Date(o.sentAt).toLocaleString()} - ${o.outcome}<br><span class="muted">${o.subject||''}</span></div>`).join('')||'<p class="empty">No touchpoints yet.</p>'}</div>`;
   }
-  companyForm(){
-    return `<h3>Create company</h3>
+  companyForm(prefix=''){
+    const pre=id=>`${prefix}${id}`;
+    return `<div id="${pre('company-form')}"><h3>Create company</h3>
       <div class="filter-row">
-        <div><label>Name</label><input id="c-name"></div>
-        <div><label>Niche</label><input id="c-niche"></div>
-        <div><label>Location</label><input id="c-loc" placeholder="City, State"></div>
-        <div><label>Status</label><select id="c-status"><option>Lead</option><option>Contacted</option><option>Replied</option><option>Meeting Set</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div>
-        <div><label>Deal Value</label><input id="c-deal" type="number" min="0"></div>
-        <div><label>Website</label><input id="c-web"></div>
-        <div><label>Primary Email</label><input id="c-email"></div>
-        <div><label>Phone</label><input id="c-phone"></div>
-        <div><label>Owner</label><input id="c-owner"></div>
-        <div><label>Tags (comma)</label><input id="c-tags"></div>
-        <div><label>Next Action</label><input id="c-next"></div>
-        <div style="grid-column:1/-1"><label>Notes</label><textarea id="c-notes"></textarea></div>
+        <div><label>Name</label><input id="${pre('c-name')}"></div>
+        <div><label>Niche</label><input id="${pre('c-niche')}"></div>
+        <div><label>Location</label><input id="${pre('c-loc')}" placeholder="City, State"></div>
+        <div><label>Status</label><select id="${pre('c-status')}"><option>Lead</option><option>Contacted</option><option>Replied</option><option>Meeting Set</option><option>Proposal</option><option>Won</option><option>Lost</option></select></div>
+        <div><label>Deal Value</label><input id="${pre('c-deal')}" type="number" min="0"></div>
+        <div><label>Website</label><input id="${pre('c-web')}"></div>
+        <div><label>Primary Email</label><input id="${pre('c-email')}"></div>
+        <div><label>Phone</label><input id="${pre('c-phone')}"></div>
+        <div><label>Owner</label><input id="${pre('c-owner')}"></div>
+        <div><label>Tags (comma)</label><input id="${pre('c-tags')}"></div>
+        <div><label>Next Action</label><input id="${pre('c-next')}"></div>
+        <div style="grid-column:1/-1"><label>Notes</label><textarea id="${pre('c-notes')}"></textarea></div>
       </div>
-      <button class="btn primary" id="c-save">Save Company</button>`;
+      <button class="btn primary" id="${pre('c-save')}">Save Company</button></div>`;
   }
-  bindCompanyForm(){
-    const btn=document.getElementById('c-save'); if(!btn) return;
+  bindCompanyForm(prefix=''){
+    const pre=id=>`${prefix}${id}`;
+    const root=document.getElementById(pre('company-form')); if(!root) return;
+    const btn=root.querySelector(`#${pre('c-save')}`); if(!btn) return;
     btn.onclick=()=>{
-      const email=document.getElementById('c-email').value;
+      const email=root.querySelector(`#${pre('c-email')}`).value;
       if(email && !/^[^@]+@[^@]+\.[^@]+$/.test(email)) return utils.toast('Invalid email');
       const data={
         companyId: utils.uuid(),
-        companyName: document.getElementById('c-name').value || 'Unnamed',
-        niche: document.getElementById('c-niche').value,
-        location: document.getElementById('c-loc').value,
-        website: document.getElementById('c-web').value,
+        companyName: root.querySelector(`#${pre('c-name')}`).value || 'Unnamed',
+        niche: root.querySelector(`#${pre('c-niche')}`).value,
+        location: root.querySelector(`#${pre('c-loc')}`).value,
+        website: root.querySelector(`#${pre('c-web')}`).value,
         primaryEmail: email,
-        phone: document.getElementById('c-phone').value,
-        ownerName: document.getElementById('c-owner').value,
-        status: document.getElementById('c-status').value,
-        dealValue: Number(document.getElementById('c-deal').value)||0,
-        notes: document.getElementById('c-notes').value,
-        tags: (document.getElementById('c-tags').value||'').split(',').map(t=>t.trim()).filter(Boolean),
-        nextAction: document.getElementById('c-next').value,
+        phone: root.querySelector(`#${pre('c-phone')}`).value,
+        ownerName: root.querySelector(`#${pre('c-owner')}`).value,
+        status: root.querySelector(`#${pre('c-status')}`).value,
+        dealValue: Number(root.querySelector(`#${pre('c-deal')}`).value)||0,
+        notes: root.querySelector(`#${pre('c-notes')}`).value,
+        tags: (root.querySelector(`#${pre('c-tags')}`).value||'').split(',').map(t=>t.trim()).filter(Boolean),
+        nextAction: root.querySelector(`#${pre('c-next')}`).value,
         createdAt: Date.now(), updatedAt: Date.now()
       };
       this.store.state.companies.push(data); this.store.persist(); this.renderAll(); utils.toast('Company saved');
@@ -415,29 +432,32 @@ class UI {
     this.renderChart();
   }
   persistFilters(prefs){ this.store.state.ui.financeFilters=prefs; this.store.persist(); this.renderFinance(); }
-  txForm(){
-    return `<h3>Add transaction</h3>
+  txForm(prefix=''){
+    const pre=id=>`${prefix}${id}`;
+    return `<div id="${pre('tx-form')}"><h3>Add transaction</h3>
       <div class="filter-row">
-        <div><label>Date</label><input type="date" id="tx-date" value="${utils.today()}"></div>
-        <div><label>Type</label><select id="tx-type-input"><option>Income</option><option>Expense</option></select></div>
-        <div><label>Amount</label><input type="number" id="tx-amount" min="0"></div>
-        <div><label>Category</label><input id="tx-category" placeholder="Revenue-Client"></div>
-        <div><label>Company</label><select id="tx-comp"><option value="">None</option>${this.store.state.companies.map(c=>`<option value="${c.companyId}">${c.companyName}</option>`).join('')}</select></div>
-        <div><label>Payment Method</label><input id="tx-method"></div>
-        <div><label>Recurring</label><select id="tx-recurring"><option value="false">No</option><option value="true">Yes</option></select></div>
-        <div><label>Interval</label><select id="tx-interval"><option value="">--</option><option>Monthly</option><option>Annual</option></select></div>
-        <div style="grid-column:1/-1"><label>Description</label><textarea id="tx-desc"></textarea></div>
+        <div><label>Date</label><input type="date" id="${pre('tx-date')}" value="${utils.today()}"></div>
+        <div><label>Type</label><select id="${pre('tx-type-input')}"><option>Income</option><option>Expense</option></select></div>
+        <div><label>Amount</label><input type="number" id="${pre('tx-amount')}" min="0"></div>
+        <div><label>Category</label><input id="${pre('tx-category')}" placeholder="Revenue-Client"></div>
+        <div><label>Company</label><select id="${pre('tx-comp')}"><option value="">None</option>${this.store.state.companies.map(c=>`<option value="${c.companyId}">${c.companyName}</option>`).join('')}</select></div>
+        <div><label>Payment Method</label><input id="${pre('tx-method')}"></div>
+        <div><label>Recurring</label><select id="${pre('tx-recurring')}"><option value="false">No</option><option value="true">Yes</option></select></div>
+        <div><label>Interval</label><select id="${pre('tx-interval')}"><option value="">--</option><option>Monthly</option><option>Annual</option></select></div>
+        <div style="grid-column:1/-1"><label>Description</label><textarea id="${pre('tx-desc')}"></textarea></div>
       </div>
-      <button class="btn primary" id="tx-save">Save transaction</button>`;
+      <button class="btn primary" id="${pre('tx-save')}">Save transaction</button></div>`;
   }
-  bindTxForm(){
-    const btn=document.getElementById('tx-save'); if(!btn) return;
+  bindTxForm(prefix=''){
+    const pre=id=>`${prefix}${id}`;
+    const root=document.getElementById(pre('tx-form')); if(!root) return;
+    const btn=root.querySelector(`#${pre('tx-save')}`); if(!btn) return;
     btn.onclick=()=>{
-      const amount=Number(document.getElementById('tx-amount').value);
+      const amount=Number(root.querySelector(`#${pre('tx-amount')}`).value);
       if(!(amount>0)) return utils.toast('Amount must be positive');
-      const date=document.getElementById('tx-date').value;
+      const date=root.querySelector(`#${pre('tx-date')}`).value;
       if(!utils.parseDate(date)) return utils.toast('Invalid date');
-      const item={ txId: utils.uuid(), date, type: document.getElementById('tx-type-input').value, amount, category: document.getElementById('tx-category').value, companyId: document.getElementById('tx-comp').value||null, description: document.getElementById('tx-desc').value, paymentMethod: document.getElementById('tx-method').value, recurring: document.getElementById('tx-recurring').value==='true', interval: document.getElementById('tx-interval').value||null };
+      const item={ txId: utils.uuid(), date, type: root.querySelector(`#${pre('tx-type-input')}`).value, amount, category: root.querySelector(`#${pre('tx-category')}`).value, companyId: root.querySelector(`#${pre('tx-comp')}`).value||null, description: root.querySelector(`#${pre('tx-desc')}`).value, paymentMethod: root.querySelector(`#${pre('tx-method')}`).value, recurring: root.querySelector(`#${pre('tx-recurring')}`).value==='true', interval: root.querySelector(`#${pre('tx-interval')}`).value||null };
       this.store.state.transactions.push(item); this.store.persist(); this.renderAll(); utils.toast('Transaction saved');
     };
   }
@@ -497,32 +517,40 @@ class UI {
     document.getElementById('log-range').onchange=e=>{this.logRange=e.target.value; this.renderLog();};
     this.bindLogForm();
   }
-  logForm(){
+  logForm(prefix=''){
     const todayLog=this.store.state.logs.find(l=>l.date===utils.today());
-    const listField=(id,label,vals)=>`<div><label>${label}</label><div class="flex" id="${id}">${vals.map((v,i)=>`<span class="badge" data-idx="${i}">${v} ✕</span>`).join('')}</div><div class="flex"><input data-input="${id}" placeholder="Add item"><button class="btn ghost" data-add="${id}">Add</button></div></div>`;
-    return `<h3>${todayLog?'Edit':'Add'} log (${utils.today()})</h3>
+    const pre=id=>`${prefix}${id}`;
+    const listField=(id,label,vals)=>`<div><label>${label}</label><div class="flex" id="${pre(id)}">${vals.map((v,i)=>`<span class="badge" data-idx="${i}">${v} ✕</span>`).join('')}</div><div class="flex"><input data-input="${pre(id)}" placeholder="Add item"><button class="btn ghost" data-add="${pre(id)}">Add</button></div></div>`;
+    return `<div id="${pre('log-form')}"><h3>${todayLog?'Edit':'Add'} log (${utils.today()})</h3>
       <div class="filter-row">
         ${listField('pri','Top priorities', todayLog?.topPriorities||[])}
         ${listField('wins','Wins', todayLog?.wins||[])}
         ${listField('block','Blockers', todayLog?.blockers||[])}
-        <div><label>Calls</label><input type="number" id="log-calls" value="${todayLog?.metrics.callsMade||0}"></div>
-        <div><label>Emails</label><input type="number" id="log-emails" value="${todayLog?.metrics.emailsSent||0}"></div>
-        <div><label>Meetings</label><input type="number" id="log-meet" value="${todayLog?.metrics.meetings||0}"></div>
-        <div><label>Revenue Today</label><input type="number" id="log-rev" value="${todayLog?.metrics.revenueToday||0}"></div>
-        <div><label>Expenses Today</label><input type="number" id="log-exp" value="${todayLog?.metrics.expensesToday||0}"></div>
-        <div style="grid-column:1/-1"><label>Notes</label><textarea id="log-notes">${todayLog?.notes||''}</textarea></div>
+        <div><label>Calls</label><input type="number" id="${pre('log-calls')}" value="${todayLog?.metrics.callsMade||0}"></div>
+        <div><label>Emails</label><input type="number" id="${pre('log-emails')}" value="${todayLog?.metrics.emailsSent||0}"></div>
+        <div><label>Meetings</label><input type="number" id="${pre('log-meet')}" value="${todayLog?.metrics.meetings||0}"></div>
+        <div><label>Revenue Today</label><input type="number" id="${pre('log-rev')}" value="${todayLog?.metrics.revenueToday||0}"></div>
+        <div><label>Expenses Today</label><input type="number" id="${pre('log-exp')}" value="${todayLog?.metrics.expensesToday||0}"></div>
+        <div style="grid-column:1/-1"><label>Notes</label><textarea id="${pre('log-notes')}">${todayLog?.notes||''}</textarea></div>
       </div>
-      <button class="btn primary" id="log-save">Save log</button>`;
+      <button class="btn primary" id="${pre('log-save')}">Save log</button></div>`;
   }
-  bindLogForm(){
+  bindLogForm(prefix=''){
+    const pre=id=>`${prefix}${id}`;
+    const root=document.getElementById(pre('log-form')); if(!root) return;
     const addItem=(id)=>{
-      const val=document.querySelector(`[data-input="${id}"]`).value; if(!val) return; const badge=document.createElement('span'); badge.className='badge'; badge.textContent=val+' ✕'; badge.onclick=()=>badge.remove(); document.getElementById(id).appendChild(badge); document.querySelector(`[data-input="${id}"]`).value='';
+      const input=root.querySelector(`[data-input="${id}"]`); if(!input||!input.value) return;
+      const badge=document.createElement('span'); badge.className='badge'; badge.textContent=input.value+' ✕'; badge.onclick=()=>badge.remove();
+      const holder=root.querySelector(`#${id}`); if(holder) holder.appendChild(badge);
+      input.value='';
     };
-    document.querySelectorAll('[data-add]').forEach(btn=>btn.onclick=()=>addItem(btn.dataset.add));
-    document.querySelectorAll('#pri .badge, #wins .badge, #block .badge').forEach(b=> b.onclick=()=>b.remove());
-    document.getElementById('log-save').onclick=()=>{
-      const collect=id=>Array.from(document.querySelectorAll(`#${id} .badge`)).map(b=>b.textContent.replace(' ✕',''));
-      const entry={ logId: this.store.state.logs.find(l=>l.date===utils.today())?.logId||utils.uuid(), date: utils.today(), topPriorities: collect('pri'), wins: collect('wins'), blockers: collect('block'), metrics:{ callsMade:Number(document.getElementById('log-calls').value)||0, emailsSent:Number(document.getElementById('log-emails').value)||0, meetings:Number(document.getElementById('log-meet').value)||0, revenueToday:Number(document.getElementById('log-rev').value)||0, expensesToday:Number(document.getElementById('log-exp').value)||0 }, notes: document.getElementById('log-notes').value };
+    root.querySelectorAll('[data-add]').forEach(btn=>btn.onclick=()=>addItem(btn.dataset.add));
+    root.querySelectorAll('.badge').forEach(b=> b.onclick=()=>b.remove());
+    const getVal=id=>Number(root.querySelector(`#${pre(id)}`)?.value)||0;
+    const collect=id=>Array.from(root.querySelectorAll(`#${id} .badge`)).map(b=>b.textContent.replace(' ✕',''));
+    const saveBtn=root.querySelector(`#${pre('log-save')}`);
+    if(saveBtn) saveBtn.onclick=()=>{
+      const entry={ logId: this.store.state.logs.find(l=>l.date===utils.today())?.logId||utils.uuid(), date: utils.today(), topPriorities: collect(pre('pri')), wins: collect(pre('wins')), blockers: collect(pre('block')), metrics:{ callsMade:getVal('log-calls'), emailsSent:getVal('log-emails'), meetings:getVal('log-meet'), revenueToday:getVal('log-rev'), expensesToday:getVal('log-exp') }, notes: root.querySelector(`#${pre('log-notes')}`)?.value||'' };
       const idx=this.store.state.logs.findIndex(l=>l.date===utils.today()); if(idx>=0) this.store.state.logs[idx]=entry; else this.store.state.logs.push(entry); this.store.persist(); this.renderAll(); utils.toast('Log saved');
     };
   }
@@ -562,8 +590,9 @@ class UI {
     if(!file) return utils.toast('Select file');
     const reader=new FileReader();
     reader.onload=()=>{
-      try{ const data=JSON.parse(reader.result); if(replace){ this.store.state=data; } else {
-        this.store.state={ companies:[...this.store.state.companies,...(data.companies||[])], outreach:[...this.store.state.outreach,...(data.outreach||[])], transactions:[...this.store.state.transactions,...(data.transactions||[])], logs:[...this.store.state.logs,...(data.logs||[])], ui:this.store.state.ui };
+      try{ const data=JSON.parse(reader.result); if(replace){ this.store.state=this.store.normalizeState(data); } else {
+        const incoming=this.store.normalizeState(data);
+        this.store.state={ companies:[...this.store.state.companies,...incoming.companies], outreach:[...this.store.state.outreach,...incoming.outreach], transactions:[...this.store.state.transactions,...incoming.transactions], logs:[...this.store.state.logs,...incoming.logs], ui:this.store.state.ui };
       } this.store.persist(); this.renderAll(); utils.toast('Import successful'); } catch(e){ utils.toast('Import failed'); }
     };
     reader.readAsText(file);
@@ -587,19 +616,19 @@ class UI {
   quickAddModal(){
     const tabs=['Transaction','Touchpoint','Company','Daily log'];
     const content=(tab)=>{
-      if(tab==='Transaction') return this.txForm();
+      if(tab==='Transaction') return this.txForm('q-');
       if(tab==='Touchpoint') return `<div class="filter-row"><div><label>Company</label><select id="qt-company">${this.store.state.companies.map(c=>`<option value="${c.companyId}">${c.companyName}</option>`).join('')}</select></div><div><label>Subject</label><input id="qt-sub"></div><div><label>Outcome</label><select id="qt-outcome"><option>No reply</option><option>Reply</option><option>Meeting</option><option>Bounce</option><option>Not interested</option></select></div><div><label>Next follow-up</label><input type="datetime-local" id="qt-next" value="${new Date(Date.now()+86400000).toISOString().slice(0,16)}"></div><button class="btn primary" id="qt-save">Save</button></div>`;
-      if(tab==='Company') return this.companyForm();
-      return this.logForm();
+      if(tab==='Company') return this.companyForm('q-');
+      return this.logForm('q-');
     };
     let active=tabs[0];
     const render=()=>{
       utils.modal('Quick Add', `<div class="tabs">${tabs.map(t=>`<div class="tab ${t===active?'active':''}" data-tab="${t}">${t}</div>`).join('')}</div><div id="quick-body">${content(active)}</div>`);
       document.querySelectorAll('[data-tab]').forEach(el=>el.onclick=()=>{active=el.dataset.tab; render();});
-      if(active==='Transaction') this.bindTxForm();
+      if(active==='Transaction') this.bindTxForm('q-');
       if(active==='Touchpoint') document.getElementById('qt-save').onclick=()=>{ const item={ outreachId: utils.uuid(), companyId: document.getElementById('qt-company').value, channel:'Call', templateName:'Quick', subject: document.getElementById('qt-sub').value, sentAt:new Date().toISOString(), outcome: document.getElementById('qt-outcome').value, nextFollowUpAt: document.getElementById('qt-next').value, followUpCount:1, notes:'' }; this.store.state.outreach.push(item); this.store.persist(); utils.closeModal(); this.renderAll(); utils.toast('Touchpoint logged'); };
-      if(active==='Company') this.bindCompanyForm();
-      if(active==='Daily log') this.bindLogForm();
+      if(active==='Company') this.bindCompanyForm('q-');
+      if(active==='Daily log') this.bindLogForm('q-');
     };
     render();
   }
