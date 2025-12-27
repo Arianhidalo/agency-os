@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agency OS - Confidential Panel</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="logo">Agency OS <span class="stamp">CONFIDENTIAL</span></div>
+      <nav>
+        <button class="nav-link active" data-view="dashboard">Dashboard</button>
+        <button class="nav-link" data-view="crm">CRM / Outreach</button>
+        <button class="nav-link" data-view="finance">Finance</button>
+        <button class="nav-link" data-view="log">CEO Daily Log</button>
+        <button class="nav-link" data-view="settings">Settings / Backup</button>
+      </nav>
+      <div class="warning">⚠ Sensitive internal data. Offline only.</div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h1 id="view-title">Dashboard</h1>
+          <p class="muted">Executive noir control panel</p>
+        </div>
+        <div class="quick-actions">
+          <button id="quick-add-tx" class="ghost">+ Quick Tx</button>
+          <button id="quick-add-touch" class="ghost">+ Quick Touchpoint</button>
+        </div>
+      </header>
+      <section id="view-dashboard" class="view"></section>
+      <section id="view-crm" class="view hidden"></section>
+      <section id="view-finance" class="view hidden"></section>
+      <section id="view-log" class="view hidden"></section>
+      <section id="view-settings" class="view hidden"></section>
+    </main>
+  </div>
+  <div id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
