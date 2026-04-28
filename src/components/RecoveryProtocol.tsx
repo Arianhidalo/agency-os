@@ -8,7 +8,7 @@ const sabotageAction: Record<string, string> = {
   'The Nihilist': 'Actúa primero. El significado se construye en movimiento.',
 };
 
-export function RecoveryProtocol({ task }: { task?: Task }) {
+export function RecoveryProtocol({ task }: { task?: Task | null }) {
   return (
     <section className="panel rounded-2xl p-4 text-sm">
       <h3 className="text-[10px] uppercase tracking-[0.3em] text-slate-500">Recovery Protocol</h3>

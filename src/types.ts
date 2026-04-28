@@ -38,6 +38,7 @@ export interface Task {
 export interface AppSettings {
   compactMode: boolean;
   showDailyDoctrine: boolean;
+  motivationalPhrases: boolean;
   accent: 'steel' | 'crimson' | 'gold' | 'terminal';
   languageMode: 'English' | 'Spanish';
   dangerousMode: boolean;

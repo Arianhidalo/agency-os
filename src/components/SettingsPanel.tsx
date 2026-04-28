@@ -20,6 +20,10 @@ export function SettingsPanel({ settings, onUpdate, onResetData }: Props) {
           <input type="checkbox" checked={settings.showDailyDoctrine} onChange={(e) => onUpdate({ ...settings, showDailyDoctrine: e.target.checked })} />
         </label>
         <label className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3">
+          Motivational phrases
+          <input type="checkbox" checked={settings.motivationalPhrases} onChange={(e) => onUpdate({ ...settings, motivationalPhrases: e.target.checked })} />
+        </label>
+        <label className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-950/70 p-3">
           Dangerous mode
           <input type="checkbox" checked={settings.dangerousMode} onChange={(e) => onUpdate({ ...settings, dangerousMode: e.target.checked })} />
         </label>

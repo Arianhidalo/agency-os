@@ -102,7 +102,18 @@ export default function App() {
       prev.map((task) => {
         if (task.id !== id) return task;
         if (status === 'completed') return { ...task, status, completedAt: new Date().toISOString() };
-        if (status === 'pending') return { ...task, status, failedAt: undefined, failureReason: undefined, sabotageCategory: undefined, nextCorrectAction: undefined, excuse: undefined };
+        if (status === 'pending') {
+          return {
+            ...task,
+            status,
+            completedAt: undefined,
+            failedAt: undefined,
+            failureReason: undefined,
+            sabotageCategory: undefined,
+            nextCorrectAction: undefined,
+            excuse: undefined,
+          };
+        }
         return task;
       }),
     );
@@ -164,6 +175,7 @@ export default function App() {
                           setFailureTask(tasks.find((taskItem) => taskItem.id === id) ?? null);
                           setStatusMessage('Pattern detected. Name the enemy.');
                         }}
+                        onReset={(id) => setStatus(id, 'pending')}
                         onDelete={(id) => setTasks((prev) => prev.filter((taskItem) => taskItem.id !== id))}
                         onEdit={(taskToEdit) => setEditingTaskId(taskToEdit.id)}
                       />
@@ -201,7 +213,7 @@ export default function App() {
             streak={streak}
             progress={progress}
             doctrine={doctrine}
-            showDoctrine={settings.showDailyDoctrine}
+            showDoctrine={settings.showDailyDoctrine && settings.motivationalPhrases}
           />
           <DominantPattern text={dominantPatternText} />
           <RecoveryProtocol task={latestFailed} />

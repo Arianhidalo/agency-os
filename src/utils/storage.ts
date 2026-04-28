@@ -7,6 +7,7 @@ const STREAK_KEY = 'command-day.streak';
 export const defaultSettings: AppSettings = {
   compactMode: false,
   showDailyDoctrine: true,
+  motivationalPhrases: true,
   accent: 'steel',
   languageMode: 'English',
   dangerousMode: false,

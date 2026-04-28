@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { AlertTriangle } from 'lucide-react';
 import { SABOTAGE_PROFILES } from '../data/constants';
@@ -17,6 +17,14 @@ export function FailureModal({ task, onClose, onSubmit }: Props) {
   const [nextCorrectAction, setNextCorrectAction] = useState('');
 
   const profile = useMemo(() => SABOTAGE_PROFILES[sabotageCategory], [sabotageCategory]);
+  useEffect(() => {
+    if (!task) return;
+    setCategory('The Negotiator');
+    setWhatHappened('');
+    setExcuse('');
+    setNextCorrectAction('');
+  }, [task]);
+
   if (!task) return null;
 
   const submit = (e: FormEvent) => {
